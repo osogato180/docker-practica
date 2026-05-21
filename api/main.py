@@ -1,91 +1,37 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
-from database import Base, engine, SessionLocal
-from models import Producto
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
+builds = []
 
+class Build(BaseModel):
+    personaje: str
+    atk: int
+    crit_rate: float
+    crit_dmg: float
+    bonus: float
+    multiplicador: float
 
-class ProductoCreate(BaseModel):
-    nombre: str
-    precio: float
+@app.post("/calcular")
+def calcular(build: Build):
 
-
-@app.get("/")
-def root():
-    return {"message": "API funcionando"}
-
-
-@app.get("/productos")
-def listar_productos():
-
-    db: Session = SessionLocal()
-
-    productos = db.query(Producto).all()
-
-    return productos
-
-
-@app.post("/productos")
-def crear_producto(producto: ProductoCreate):
-
-    db: Session = SessionLocal()
-
-    nuevo = Producto(
-        nombre=producto.nombre,
-        precio=producto.precio
+    daño = (
+        build.atk
+        * (build.multiplicador / 100)
+        * (1 + build.crit_dmg / 100)
+        * (1 + build.bonus / 100)
     )
 
-    db.add(nuevo)
+    resultado = {
+        **build.dict(),
+        "daño_final": round(daño, 2)
+    }
 
-    db.commit()
+    builds.append(resultado)
 
-    db.refresh(nuevo)
+    return resultado
 
-    return nuevo
-
-
-@app.put("/productos/{producto_id}")
-def actualizar_producto(
-    producto_id: int,
-    producto: ProductoCreate
-):
-
-    db: Session = SessionLocal()
-
-    prod = db.query(Producto).filter(
-        Producto.id == producto_id
-    ).first()
-
-    if not prod:
-        return {"error": "No existe"}
-
-    prod.nombre = producto.nombre
-    prod.precio = producto.precio
-
-    db.commit()
-
-    return prod
-
-
-@app.delete("/productos/{producto_id}")
-def eliminar_producto(producto_id: int):
-
-    db: Session = SessionLocal()
-
-    prod = db.query(Producto).filter(
-        Producto.id == producto_id
-    ).first()
-
-    if not prod:
-        return {"error": "No existe"}
-
-    db.delete(prod)
-
-    db.commit()
-
-    return {"message": "Eliminado"}
+@app.get("/builds")
+def obtener_builds():
+    return builds

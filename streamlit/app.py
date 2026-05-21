@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 import requests
 import streamlit as st
@@ -7,108 +6,104 @@ import streamlit as st
 API_URL = os.getenv("API_URL")
 
 st.set_page_config(
-    page_title="CRUD Demo",
+    page_title="HSR Damage Calculator",
     layout="wide"
 )
 
-st.title("🐳 Streamlit + FastAPI + PostgreSQL")
+st.title("⚔️ HSR Damage Calculator")
 
-tab1 = st.tabs(["CRUD Productos"])[0]
+characters = [
+    "Kafka",
+    "Jingliu",
+    "Acheron",
+    "Firefly",
+    "Blade",
+    "Dan Heng IL"
+]
 
-with tab1:
+st.header("📊 Calcular daño")
 
-    st.header("➕ Crear producto")
+with st.form("damage_form"):
 
-    with st.form("crear_producto"):
-
-        nombre = st.text_input("Nombre")
-
-        precio = st.number_input(
-            "Precio",
-            min_value=0.0
-        )
-
-        submitted = st.form_submit_button(
-            "Guardar"
-        )
-
-        if submitted:
-
-            response = requests.post(
-                f"{API_URL}/productos",
-                json={
-                    "nombre": nombre,
-                    "precio": precio
-                }
-            )
-
-            if response.status_code == 200:
-                st.success("Producto creado")
-
-    st.divider()
-
-    st.header("📋 Productos")
-
-    response = requests.get(
-        f"{API_URL}/productos"
+    personaje = st.selectbox(
+        "Personaje",
+        characters
     )
 
-    productos = response.json()
+    atk = st.number_input(
+        "ATK",
+        min_value=0,
+        value=2500
+    )
 
-    if productos:
+    crit_rate = st.slider(
+        "Crit Rate %",
+        0,
+        100,
+        70
+    )
 
-        df = pd.DataFrame(productos)
+    crit_dmg = st.slider(
+        "Crit DMG %",
+        0,
+        400,
+        150
+    )
 
-        st.dataframe(
-            df,
-            use_container_width=True
+    bonus = st.slider(
+        "Bonus Damage %",
+        0,
+        200,
+        50
+    )
+
+    multiplicador = st.number_input(
+        "Skill Multiplier %",
+        min_value=0,
+        value=240
+    )
+
+    submitted = st.form_submit_button(
+        "Calcular"
+    )
+
+    if submitted:
+
+        payload = {
+            "personaje": personaje,
+            "atk": atk,
+            "crit_rate": crit_rate,
+            "crit_dmg": crit_dmg,
+            "bonus": bonus,
+            "multiplicador": multiplicador
+        }
+
+        response = requests.post(
+            f"{API_URL}/calcular",
+            json=payload
         )
 
-    st.divider()
+        data = response.json()
 
-    st.header("✏️ Actualizar")
-
-    product_id = st.number_input(
-        "ID producto",
-        min_value=1,
-        step=1
-    )
-
-    nuevo_nombre = st.text_input(
-        "Nuevo nombre"
-    )
-
-    nuevo_precio = st.number_input(
-        "Nuevo precio",
-        min_value=0.0
-    )
-
-    if st.button("Actualizar"):
-
-        requests.put(
-            f"{API_URL}/productos/{product_id}",
-            json={
-                "nombre": nuevo_nombre,
-                "precio": nuevo_precio
-            }
+        st.success(
+            f"🔥 Daño Final: {data['daño_final']}"
         )
 
-        st.success("Producto actualizado")
+st.divider()
 
-    st.divider()
+st.header("💾 Historial de builds")
 
-    st.header("🗑️ Eliminar")
+response = requests.get(
+    f"{API_URL}/builds"
+)
 
-    delete_id = st.number_input(
-        "ID eliminar",
-        min_value=1,
-        step=1
+builds = response.json()
+
+if builds:
+
+    df = pd.DataFrame(builds)
+
+    st.dataframe(
+        df,
+        use_container_width=True
     )
-
-    if st.button("Eliminar"):
-
-        requests.delete(
-            f"{API_URL}/productos/{delete_id}"
-        )
-
-        st.warning("Producto eliminado")
