@@ -1,29 +1,31 @@
 services:
 
-  streamlit:
-    build: ./streamlit
+  postgres:
+    image: postgres:16-alpine
 
-    container_name: streamlit_app
-
-    ports:
-      - "8501:8501"
-
-    volumes:
-      - ./streamlit:/app
+    container_name: postgres_db
 
     environment:
-      API_URL: http://api:8000
+      POSTGRES_DB: demo_db
+      POSTGRES_USER: demo_user
+      POSTGRES_PASSWORD: demo_pass
 
-    depends_on:
-      - api
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo_user -d demo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build: ./api
 
     container_name: fastapi_backend
-
-    ports:
-      - "8000:8000"
 
     environment:
       DB_HOST: postgres
@@ -31,27 +33,26 @@ services:
       DB_USER: demo_user
       DB_PASSWORD: demo_pass
 
-    volumes:
-      - ./api:/app
+    ports:
+      - "8000:8000"
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
-  postgres:
-    image: postgres:16-alpine
+  streamlit:
+    build: ./streamlit
 
-    container_name: postgres_db
-
-    ports:
-      - "5432:5432"
+    container_name: streamlit_app
 
     environment:
-      POSTGRES_DB: demo_db
-      POSTGRES_USER: demo_user
-      POSTGRES_PASSWORD: demo_pass
+      API_URL: http://api:8000
 
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "8501:8501"
+
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
