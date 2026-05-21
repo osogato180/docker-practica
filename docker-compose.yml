@@ -1,0 +1,57 @@
+services:
+
+  streamlit:
+    build: ./streamlit
+
+    container_name: streamlit_app
+
+    ports:
+      - "8501:8501"
+
+    volumes:
+      - ./streamlit:/app
+
+    environment:
+      API_URL: http://api:8000
+
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+
+    container_name: fastapi_backend
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DB_HOST: postgres
+      DB_NAME: demo_db
+      DB_USER: demo_user
+      DB_PASSWORD: demo_pass
+
+    volumes:
+      - ./api:/app
+
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+
+    container_name: postgres_db
+
+    ports:
+      - "5432:5432"
+
+    environment:
+      POSTGRES_DB: demo_db
+      POSTGRES_USER: demo_user
+      POSTGRES_PASSWORD: demo_pass
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
